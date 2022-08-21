@@ -94,6 +94,7 @@ $stmt = $db->query('SELECT * FROM table');
 $row_count = $stmt->rowCount();
 echo $row_count.' rows selected';
 
+SELECT * FROM votes where aspirant id ='$id';
 
 
 
@@ -102,3 +103,4 @@ echo $row_count.' rows selected';
 
 
 
+SELECT a.id, a.surname, a.othername, aspirant_id from aspirants as a, votes

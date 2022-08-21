@@ -16,12 +16,18 @@
 
 		public function connection()
 		{
-		    $hostname ="localhost";
-			$db_username = "root";
-			$passwd = "madivel@";
-			$dbname ="rofosa_election";
-	        $pdo_obj = new PDO("mysql:host=$hostname;dbname=$dbname", "$db_username", "$passwd");
-	        return $pdo_obj;
+			try {
+			    $hostname ="localhost";
+				$db_username = "root";
+				$passwd = "madivel@";
+				$dbname ="rofosa_election";
+		        $pdo_obj = new PDO("mysql:host=$hostname;dbname=$dbname", "$db_username", "$passwd");
+		        return $pdo_obj;
+		     }
+		     catch(PDOException $e)
+			    {
+			    return "Connection failed: " . $e->getMessage();
+		    }
 		} 
 
 		public function bar()
@@ -39,21 +45,31 @@
 			$this->username=$username;
 			$this->password=$password;
 
-			$query = $this->connection()->prepare("SELECT * FROM voters WHERE phone_number='$username' AND password ='$password'"); 
+			$query = $this->connection()->prepare("SELECT * FROM voters WHERE phone_number='$username' AND password ='$password' AND status='0'"); 
     		$query->execute();
 			$result = $query->fetch();		//same as mysql_fetch_array
 
 			if($query->rowCount() >= '1') {		//condition to check if a record is gotten from the database
 				// print_r($result);
+				$logger_id = $result['id'];
+
+
+
+				//write code to update status to 1 during login to avoid double voting
+				// $query = $this->connection()->prepare("UPDATE voters SET status='1' WHERE id='$logger_id'");
+		    	// $query->execute();
+		    	//uncomment later
+
+		    	
 			
-				$_SESSION['voter_id'] = $result['id'];
+				$_SESSION['voter_id'] = $logger_id;
 				$_SESSION['surname'] = $result['surnames'];	
 				$_SESSION['othername'] = $result['othernames'];
 				
 			    header("location:voter/index.php");
 			}elseif ($username == 'Rofosa' && $password == 'thankyou2#') {
 				$_SESSION['admin'] = $username;	//picks the username value and stores it in the admin key
-				header('location:admin/index.php');
+				header('location:admin/register_aspirant.php');
 			}
 			else{
 				return "Invalid Login Details!!!";
@@ -122,32 +138,65 @@
 		}
 		//end update function
 
+		// define getPosition function
+		public function getPosition($position){
+			$query = $this->connection()->prepare("SELECT * FROM position where name='$position'"); 
+    		$query->execute();
+    		return $query->fetch();
+		}
+		// end getPosition function
+
+		// define getAllPosition function
+		public function getAllPosition(){
+			$query = $this->connection()->prepare("SELECT * FROM position"); 
+    		$query->execute();
+    		return $query->fetchAll();
+		}
+		//end getAllPosition function
 
 
 
 		//define vote function
-		public function voteAspirant(){
-
+		public function voteAspirant($aspirant_id, $aspirant_name, $voter_id){
+			$sql = "INSERT INTO votes (id, aspirant_id, aspirant_name, voter_id) VALUES (NULL,'$aspirant_id', '$aspirant_name', '$voter_id')";
+		    // use exec() because no results are returned
+		   $this->connection()->exec($sql);
+		   return true;
 		}
 		// end vote function
 
 		// define viewAspirantResult function
-		public function viewAspirantResult(){
-
+		public function viewAspirantResult($aspirant_id){
+			$query = $this->connection()->prepare("SELECT * FROM votes where aspirant_id='$aspirant_id'"); 
+    		$query->execute();
+    		return $query->rowCount();
 		}
 		// end viewAspirantResult function
 
-		// define viewAllAspirantsResult function
-		public function viewAllAspirantsResult(){
-
+		// define storeAllAspirantsResult function
+		public function storeAllAspirantsResult($number_of_votes, $aspirant_id, $position, $name){
+				$sql = "INSERT INTO aspirant_result VALUES (NULL,'$number_of_votes', '$aspirant_id', '$position', '$name')";
+			    // use exec() because no results are returned
+			   $affected = $this->connection()->exec($sql);
+			   // if ($affected == false) {
+			   //      $err = $this->connection()->errorInfo();
+			   //      print_r($err);
+			   //  }
+			   return true;
 		}
-		// end viewAspirantResult function
+		// end storeAspirantResult function
+
+		public function getFinalResults(){
+			$query = $this->connection()->prepare("SELECT * FROM aspirant_result  ORDER BY aspirant_id"); 
+    		$query->execute();
+    		return $query->fetchAll();
+		}
 
 
 	}
 
 	// $obj = new Rofosa;
-	// $med = $obj->deleteAspirant('1');
+	// $med = $obj->storeAllAspirantsResult(2, 1, 'director', 'John');
 	// echo $med;
 	// print_r($med);
 	// die();
